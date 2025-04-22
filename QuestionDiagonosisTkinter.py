@@ -46,6 +46,18 @@ class HyperlinkManager:
 training_dataset = pd.read_csv('Training.csv')
 test_dataset = pd.read_csv('Testing.csv')
 
+
+# ✅ Step 1: Extract symptoms and build relationships
+all_symptoms = training_dataset.columns[:-1].tolist()
+
+def get_related_symptoms(initial_symptom, top_n=5):
+    if initial_symptom not in all_symptoms:
+        return []
+    related_symptoms = training_dataset[training_dataset[initial_symptom] == 1][all_symptoms].sum()
+    related_symptoms = related_symptoms.sort_values(ascending=False)
+    related = [sym for sym in related_symptoms.index if sym != initial_symptom][:top_n]
+    return related
+
 # Slicing and Dicing the dataset to separate features from predictions
 X = training_dataset.iloc[:, 0:132].values
 Y = training_dataset.iloc[:, -1].values
@@ -201,70 +213,129 @@ record['link']
 
 
 class QuestionDigonosis(Frame):
-    objIter=None
-    objRef=None
-    def __init__(self,master=None):
+    objIter = None
+    objRef = None
+
+    def __init__(self, master=None):
         master.title("Question")
-        # root.iconbitmap("")
         master.state("z")
-#        master.minsize(700,350)
-        QuestionDigonosis.objRef=self
+        QuestionDigonosis.objRef = self
         super().__init__(master=master)
-        self["bg"]="light blue"
+        self["bg"] = "light blue"
         self.createWidget()
-        self.iterObj=None
+        self.iterObj = None
 
     def createWidget(self):
-        self.lblQuestion=Label(self,text="Question",width=12,bg="bisque")
-        self.lblQuestion.grid(row=0,column=0,rowspan=4)
+        self.lblQuestion = Label(self, text="Question", width=12, bg="bisque")
+        self.lblQuestion.grid(row=0, column=0, rowspan=4)
 
-        self.lblDigonosis = Label(self, text="Digonosis",width=12,bg="bisque")
-        self.lblDigonosis.grid(row=4, column=0,sticky="n",pady=5)
+        self.lblDigonosis = Label(self, text="Digonosis", width=12, bg="bisque")
+        self.lblDigonosis.grid(row=4, column=0, sticky="n", pady=5)
 
-        # self.varQuestion=StringVar()
-        self.txtQuestion = Text(self, width=100,height=4)
-        self.txtQuestion.grid(row=0, column=1,rowspan=4,columnspan=20)
+        self.txtQuestion = Text(self, width=100, height=4)
+        self.txtQuestion.grid(row=0, column=1, rowspan=4, columnspan=20)
 
-        self.varDiagonosis=StringVar()
-        self.txtDigonosis =Text(self, width=100,height=14)
-        self.txtDigonosis.grid(row=4, column=1,columnspan=20,rowspan=20,pady=5)
+        self.txtDigonosis = Text(self, width=100, height=14)
+        self.txtDigonosis.grid(row=4, column=1, columnspan=20, rowspan=20, pady=5)
 
-        self.btnNo=Button(self,text="No",width=12,bg="bisque", command=self.btnNo_Click)
-        self.btnNo.grid(row=25,column=0)
-        self.btnYes = Button(self, text="Yes",width=12,bg="bisque", command=self.btnYes_Click)
-        self.btnYes.grid(row=25, column=1,columnspan=20,sticky="e")
+        self.btnNo = Button(self, text="No", width=12, bg="bisque", command=self.btnNo_Click)
+        self.btnNo.grid(row=25, column=0)
 
-        self.btnClear = Button(self, text="Clear",width=12,bg="bisque", command=self.btnClear_Click)
+        self.btnYes = Button(self, text="Yes", width=12, bg="bisque", command=self.btnYes_Click)
+        self.btnYes.grid(row=25, column=1, columnspan=20, sticky="e")
+
+        self.btnClear = Button(self, text="Clear", width=12, bg="bisque", command=self.btnClear_Click)
         self.btnClear.grid(row=27, column=0)
-        self.btnStart = Button(self, text="Start",width=12,bg="bisque", command=self.btnStart_Click)
-        self.btnStart.grid(row=27, column=1,columnspan=20,sticky="e")
-    def btnNo_Click(self):
-        global val,ans
-        global val,ans
-        ans='no'
-        str1=QuestionDigonosis.objIter.__next__()
-        self.txtQuestion.delete(0.0,END)
-        self.txtQuestion.insert(END,str1+"\n")
-        
-    def btnYes_Click(self):
-        global val,ans
-        ans='yes'
-        self.txtDigonosis.delete(0.0,END)
-        str1=QuestionDigonosis.objIter.__next__()
-        
-#        self.txtDigonosis.insert(END,str1+"\n")
-        
-    def btnClear_Click(self):
-        self.txtDigonosis.delete(0.0,END)
-        self.txtQuestion.delete(0.0,END)
+
+        self.btnStart = Button(self, text="Start", width=12, bg="bisque", command=self.btnStart_Click)
+        self.btnStart.grid(row=27, column=1, columnspan=20, sticky="e")
+
+        # 🔥 Dynamic Symptom Input (correctly indented!)
+        self.lblCustomSymptom = Label(self, text="Enter initial symptom", width=20, bg="bisque")
+        self.lblCustomSymptom.grid(row=28, column=0, pady=10)
+
+        self.entrySymptom = Entry(self, width=30)
+        self.entrySymptom.grid(row=28, column=1)
+
+        self.btnDynamicStart = Button(self, text="Smart Start", width=12, bg="lightgreen", command=self.dynamic_start)
+        self.btnDynamicStart.grid(row=29, column=1, pady=5, sticky="e")
+
     def btnStart_Click(self):
         execute_bot()
-        self.txtDigonosis.delete(0.0,END)
-        self.txtQuestion.delete(0.0,END)
-        self.txtDigonosis.insert(END,"Please Click on Yes or No for the Above symptoms in Question")                  
-        QuestionDigonosis.objIter=recurse(0, 1)
-        str1=QuestionDigonosis.objIter.__next__()
-        self.txtQuestion.insert(END,str1+"\n")
+        self.txtDigonosis.delete(0.0, END)
+        self.txtQuestion.delete(0.0, END)
+        self.txtDigonosis.insert(END, "Please Click on Yes or No for the Above symptoms in Question")
+        QuestionDigonosis.objIter = recurse(0, 1)
+        str1 = QuestionDigonosis.objIter.__next__()
+        self.txtQuestion.insert(END, str1 + "\n")
+
+    def btnClear_Click(self):
+        self.txtDigonosis.delete(0.0, END)
+        self.txtQuestion.delete(0.0, END)
+
+    def btnYes_Click(self):
+        global ans
+        ans = 'yes'
+        try:
+            if hasattr(self, 'symptom_flow') and self.current_symptom_index < len(self.symptom_flow):
+                self.selected_symptoms.append(self.symptom_flow[self.current_symptom_index])
+                self.current_symptom_index += 1
+                self.ask_next_symptom()
+            else:
+                str1 = QuestionDigonosis.objIter.__next__()
+                self.txtQuestion.delete(0.0, END)
+                self.txtQuestion.insert(END, str1 + "\n")
+        except StopIteration:
+            pass
+
+    def btnNo_Click(self):
+        global ans
+        ans = 'no'
+        try:
+            if hasattr(self, 'symptom_flow') and self.current_symptom_index < len(self.symptom_flow):
+                self.current_symptom_index += 1
+                self.ask_next_symptom()
+            else:
+                str1 = QuestionDigonosis.objIter.__next__()
+                self.txtQuestion.delete(0.0, END)
+                self.txtQuestion.insert(END, str1 + "\n")
+        except StopIteration:
+            pass
+
+    def dynamic_start(self):
+        self.txtDigonosis.delete(0.0, END)
+        self.txtQuestion.delete(0.0, END)
+
+        symptom = self.entrySymptom.get().strip().lower().replace(" ", "_")
+
+        if symptom not in all_symptoms:
+            messagebox.showerror("Invalid", "Symptom not recognized.")
+            return
+
+        related = get_related_symptoms(symptom)
+
+        self.selected_symptoms = [symptom]
+        self.current_symptom_index = 0
+        self.symptom_flow = related
+
+        self.ask_next_symptom()
+
+    def ask_next_symptom(self):
+        if self.current_symptom_index < len(self.symptom_flow):
+            question = f"Do you have {self.symptom_flow[self.current_symptom_index].replace('_', ' ')}?"
+            self.txtQuestion.delete(0.0, END)
+            self.txtQuestion.insert(END, question)
+        else:
+            self.predict_from_symptoms()
+
+    def predict_from_symptoms(self):
+        input_vector = [1 if symptom in self.selected_symptoms else 0 for symptom in all_symptoms]
+        prediction = classifier.predict([input_vector])[0]
+        disease = labelencoder.inverse_transform([prediction])[0]
+        self.txtDigonosis.insert(END, f"Based on symptoms, you may have: {disease}\n")
+
+
+
 
 
 class MainForm(Frame):
@@ -287,11 +358,11 @@ class MainForm(Frame):
         self.btnRegister.pack()
         self.lblTeam=Label(self, text="Made by:", bg="slateblue4", width = "250", height = "1", font=("Calibri", 13))
         self.lblTeam.pack()
-        self.lblTeam1=Label(self, text="Aryan Veturekar", bg="RoyalBlue1", width = "250", height = "1", font=("Calibri", 13))
+        self.lblTeam1=Label(self, text="R.ujwala", bg="RoyalBlue1", width = "250", height = "1", font=("Calibri", 13))
         self.lblTeam1.pack()
-        self.lblTeam2=Label(self, text="Himanshu Singh", bg="RoyalBlue2", width = "250", height = "1", font=("Calibri", 13))
+        self.lblTeam2=Label(self, text="Noor Ayesha", bg="RoyalBlue2", width = "250", height = "1", font=("Calibri", 13))
         self.lblTeam2.pack()
-        self.lblTeam3=Label(self, text="Danish Shaikh", bg="RoyalBlue3", width = "250", height = "1", font=("Calibri", 13))
+        self.lblTeam3=Label(self, text="Sathish Sharma", bg="RoyalBlue3", width = "250", height = "1", font=("Calibri", 13))
         self.lblTeam3.pack()
         
     def lblLogin_Click(self):
@@ -405,10 +476,8 @@ class SignUp(Frame):
 
 
 
-root = Tk()
-
-frmMainForm=MainForm(root)
-frmMainForm.pack()
-root.mainloop()
-
-
+if __name__ == '__main__':
+    root = Tk()
+    app = MainForm(master=root)
+    app.pack()
+    root.mainloop()
