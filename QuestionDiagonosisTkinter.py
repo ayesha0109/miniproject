@@ -10,6 +10,8 @@ import pandas as pd
 from PIL import Image, ImageTk
 import requests
 from io import BytesIO
+from sklearn.metrics import accuracy_score
+
 
 
 class HyperlinkManager:
@@ -247,49 +249,44 @@ class QuestionDigonosis(Frame):
         self.iterObj = None
 
     def createWidget(self):
-        self.lblQuestion = Label(self, text="Question", width=12, bg="bisque")
-        self.lblQuestion.grid(row=0, column=0, rowspan=4)
+        default_font = ("Helvetica", 12)
+        label_font = ("Helvetica", 12, "bold")
+        button_font = ("Helvetica", 12, "bold")
+        text_font = ("Helvetica", 12)
 
-        self.lblDigonosis = Label(self, text="Digonosis", width=12, bg="bisque")
-        self.lblDigonosis.grid(row=4, column=0, sticky="n", pady=5)
+        self.lblQuestion = Label(self, text="Question", width=15, bg="#ffe4b5", font=label_font)
+        self.lblQuestion.grid(row=0, column=0, rowspan=4, padx=10, pady=5, sticky="n")
 
-        self.txtQuestion = Text(self, width=100, height=4)
-        self.txtQuestion.grid(row=0, column=1, rowspan=4, columnspan=20)
+        self.lblDigonosis = Label(self, text="Diagnosis", width=15, bg="#ffe4b5", font=label_font)
+        self.lblDigonosis.grid(row=4, column=0, sticky="n", pady=5, padx=10)
 
-        self.txtDigonosis = Text(self, width=100, height=14)
-        self.txtDigonosis.grid(row=4, column=1, columnspan=20, rowspan=20, pady=5)
+        self.txtQuestion = Text(self, width=80, height=4, font=text_font, bd=2, relief="groove")
+        self.txtQuestion.grid(row=0, column=1, rowspan=4, columnspan=20, pady=5, padx=10)
 
-        self.btnNo = Button(self, text="No", width=12, bg="bisque", command=self.btnNo_Click)
-        self.btnNo.grid(row=25, column=0)
+        self.txtDigonosis = Text(self, width=80, height=14, font=text_font, bd=2, relief="groove")
+        self.txtDigonosis.grid(row=4, column=1, columnspan=20, rowspan=20, pady=5, padx=10)
 
-        self.btnYes = Button(self, text="Yes", width=12, bg="bisque", command=self.btnYes_Click)
-        self.btnYes.grid(row=25, column=1, columnspan=20, sticky="e")
+        self.btnNo = Button(self, text="❌ No", width=15, bg="#ffcccc", font=button_font, command=self.btnNo_Click)
+        self.btnNo.grid(row=25, column=0, pady=10, padx=10)
 
-        self.btnClear = Button(self, text="Clear", width=12, bg="bisque", command=self.btnClear_Click)
-        self.btnClear.grid(row=27, column=0)
+        self.btnYes = Button(self, text="✅ Yes", width=15, bg="#ccffcc", font=button_font, command=self.btnYes_Click)
+        self.btnYes.grid(row=25, column=1, columnspan=20, sticky="e", padx=10)
 
-        self.btnStart = Button(self, text="Start", width=12, bg="bisque", command=self.btnStart_Click)
-        self.btnStart.grid(row=27, column=1, columnspan=20, sticky="e")
+        self.btnClear = Button(self, text="🧹 Clear", width=15, bg="#ffe4b5", font=button_font, command=self.btnClear_Click)
+        self.btnClear.grid(row=27, column=0, pady=10, padx=10)
 
-        # 🔥 Dynamic Symptom Input (correctly indented!)
-        self.lblCustomSymptom = Label(self, text="Enter initial symptom", width=20, bg="bisque")
-        self.lblCustomSymptom.grid(row=28, column=0, pady=10)
+        
+        self.lblCustomSymptom = Label(self, text="🔍 Enter initial symptom", width=25, bg="#ffe4b5", font=label_font)
+        self.lblCustomSymptom.grid(row=28, column=0, pady=10, padx=10)
 
-        self.entrySymptom = Entry(self, width=30)
-        self.entrySymptom.grid(row=28, column=1)
+        self.entrySymptom = Entry(self, width=30, font=default_font)
+        self.entrySymptom.grid(row=28, column=1, padx=10)
 
-        self.btnDynamicStart = Button(self, text="Smart Start", width=12, bg="lightgreen", command=self.dynamic_start)
-        self.btnDynamicStart.grid(row=29, column=1, pady=5, sticky="e")
+        self.btnDynamicStart = Button(self, text="🤖 Smart Start", width=15, bg="#b3ffb3", font=button_font, command=self.dynamic_start)
+        self.btnDynamicStart.grid(row=29, column=1, pady=5, sticky="e", padx=10)
 
-    def btnStart_Click(self):
-        execute_bot()
-        self.txtDigonosis.delete(0.0, END)
-        self.txtQuestion.delete(0.0, END)
-        self.txtDigonosis.insert(END, "Please Click on Yes or No for the Above symptoms in Question")
-        QuestionDigonosis.objIter = recurse(0, 1)
-        str1 = QuestionDigonosis.objIter.__next__()
-        self.txtQuestion.insert(END, str1 + "\n")
 
+    
     def btnClear_Click(self):
         self.txtDigonosis.delete(0.0, END)
         self.txtQuestion.delete(0.0, END)
@@ -363,12 +360,17 @@ class QuestionDigonosis(Frame):
     # Get specialist for the predicted disease
         specialist = disease_to_specialist.get(disease, "General Physician")
 
-    # Find a matching doctor for the specialist
-        matching_doctors = special_doctor_df[special_doctor_df["speciality"] == specialist]["Doctor's Name"].tolist()
-        if matching_doctors:
-            doctor = random.choice(matching_doctors)
+    
+        matching_rows = special_doctor_df[special_doctor_df["speciality"] == specialist]
+
+        if not matching_rows.empty:
+            selected_row = matching_rows.sample(1).iloc[0]  # Random row
+            doctor = selected_row["Doctor's Name"]
+            link = selected_row["link"]
         else:
             doctor = "No specialist doctor available"
+            link = "N/A"
+            
 
     # Match remedies by symptoms
         remedies = []
@@ -395,6 +397,9 @@ class QuestionDigonosis(Frame):
         self.txtDigonosis.insert(END, f"Based on symptoms, you may have: {disease}\n")
         self.txtDigonosis.insert(END, f"Recommended specialist: {specialist}\n")
         self.txtDigonosis.insert(END, f"Suggested Doctor: {doctor}\n")
+        self.txtDigonosis.insert(END, f"Link: {link}\n", "blue_link")
+        self.txtDigonosis.tag_configure("blue_link", foreground="blue", underline=True)
+
 
         self.txtDigonosis.insert(END, f"\n🪴 Home Remedies:\n")
         for r in remedies:
