@@ -4,7 +4,7 @@ from tkinter import *
 from tkinter import messagebox                           
 import os            
 import webbrowser
-
+import random
 import numpy as np
 import pandas as pd
    
@@ -46,6 +46,19 @@ class HyperlinkManager:
 training_dataset = pd.read_csv('Training.csv')
 test_dataset = pd.read_csv('Testing.csv')
 
+# # Load the disease-specialist mapping (do this once, outside the function ideally)
+# disease_specialist_df = pd.read_csv("disease_special.csv")
+# disease_to_specialist = dict(zip(disease_specialist_df["Prognosis"], disease_specialist_df["Speciality"]))
+
+# Load and clean datasets (do this once outside the class)
+disease_specialist_df = pd.read_csv("disease_special.csv")
+disease_specialist_df.columns = disease_specialist_df.columns.str.strip()
+
+special_doctor_df = pd.read_csv("special_doctor.csv")
+special_doctor_df.columns = special_doctor_df.columns.str.strip()
+
+# Create mapping from disease to specialist
+disease_to_specialist = dict(zip(disease_specialist_df["Prognosis"], disease_specialist_df["Speciality"]))
 
 # ✅ Step 1: Extract symptoms and build relationships
 all_symptoms = training_dataset.columns[:-1].tolist()
@@ -327,12 +340,33 @@ class QuestionDigonosis(Frame):
             self.txtQuestion.insert(END, question)
         else:
             self.predict_from_symptoms()
+    
+
+
 
     def predict_from_symptoms(self):
+    # Generate input vector based on selected symptoms
         input_vector = [1 if symptom in self.selected_symptoms else 0 for symptom in all_symptoms]
+    
+    # Make prediction
         prediction = classifier.predict([input_vector])[0]
         disease = labelencoder.inverse_transform([prediction])[0]
+
+    # Get specialist for the predicted disease
+        specialist = disease_to_specialist.get(disease, "General Physician")
+
+    # Find a matching doctor for the specialist
+        matching_doctors = special_doctor_df[special_doctor_df["speciality"] == specialist]["Doctor's Name"].tolist()
+        if matching_doctors:
+            doctor = random.choice(matching_doctors)
+        else:
+            doctor = "No specialist doctor available"
+
+    # Display output in the GUI
         self.txtDigonosis.insert(END, f"Based on symptoms, you may have: {disease}\n")
+        self.txtDigonosis.insert(END, f"Recommended specialist: {specialist}\n")
+        self.txtDigonosis.insert(END, f"Suggested Doctor: {doctor}\n")
+
 
 
 
@@ -458,7 +492,7 @@ class SignUp(Frame):
         file = open(self.username_entry.get(), "w")
         file.write(self.username_entry.get() + "\n")
         file.write(self.password_entry.get())
-        file.close()
+        # file.close()
         
         self.destroyPackWidget(SignUp.main_Root)
         
