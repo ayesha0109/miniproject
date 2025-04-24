@@ -7,7 +7,10 @@ import webbrowser
 import random
 import numpy as np
 import pandas as pd
-   
+from PIL import Image, ImageTk
+import requests
+from io import BytesIO
+
 
 class HyperlinkManager:
       
@@ -56,6 +59,11 @@ disease_specialist_df.columns = disease_specialist_df.columns.str.strip()
 
 special_doctor_df = pd.read_csv("special_doctor.csv")
 special_doctor_df.columns = special_doctor_df.columns.str.strip()
+
+# Load the Home Remedies dataset
+home_remedies_df = pd.read_csv("Home Remedies.csv")
+home_remedies_df.columns = home_remedies_df.columns.str.strip()
+
 
 # Create mapping from disease to specialist
 disease_to_specialist = dict(zip(disease_specialist_df["Prognosis"], disease_specialist_df["Speciality"]))
@@ -362,10 +370,39 @@ class QuestionDigonosis(Frame):
         else:
             doctor = "No specialist doctor available"
 
-    # Display output in the GUI
+    # Match remedies by symptoms
+        remedies = []
+        yogas = []
+        for symptom in self.selected_symptoms:
+            rows = home_remedies_df[home_remedies_df["Health Issue"].str.lower().str.contains(symptom.lower())]
+            for _, row in rows.iterrows():
+                remedies.append(row["Home Remedy"])
+                yogas.append(row["Yogasan"])
+
+    # If no remedies found by symptom, try by disease
+        if not remedies:
+            rows = home_remedies_df[home_remedies_df["Health Issue"].str.lower().str.contains(disease.lower())]
+            for _, row in rows.iterrows():
+                remedies.append(row["Home Remedy"])
+                yogas.append(row["Yogasan"])
+
+    # If still nothing, give default
+        if not remedies:
+            remedies = ["No specific home remedies found."]
+            yogas = ["No yogasan available."]
+
+    # Display in the GUI
         self.txtDigonosis.insert(END, f"Based on symptoms, you may have: {disease}\n")
         self.txtDigonosis.insert(END, f"Recommended specialist: {specialist}\n")
         self.txtDigonosis.insert(END, f"Suggested Doctor: {doctor}\n")
+
+        self.txtDigonosis.insert(END, f"\n🪴 Home Remedies:\n")
+        for r in remedies:
+            self.txtDigonosis.insert(END, f"- {r}\n")
+
+        # self.txtDigonosis.insert(END, f"\n🧘 Suggested Yogasans:\n")
+        # for y in yogas:
+        #     self.txtDigonosis.insert(END, f"- {y}\n")
 
 
 
